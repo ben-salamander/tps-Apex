@@ -9,6 +9,8 @@ List<List<sObject>> searchResults = [FIND :searchString
  * 	named resultContacts and assign to it to the position zero result 
  *	returned from the SOSL search that initialized the searchResults property.
  */ 
+List<Contact> resultContacts = new List<Contact>();
+resultContacts = searchResults[0];
 
 
 /** TODO #2: Create a for-loop with an iterator of type Contact named  
@@ -19,6 +21,11 @@ List<List<sObject>> searchResults = [FIND :searchString
  *             -- the first name of the resultContact
  *             -- the last name of the resultContact
  */
+for (Contact resultContact : resultContacts) {
+    System.debug('Id : ' + resultContact.Id);
+    System.debug('First name : ' + resultContact.FirstName);
+    System.debug('Last name : ' + resultContact.LastName);
+}
 
 
 /** TODO #3: Declare a variable whose type is a list of User sObjects 
@@ -26,6 +33,8 @@ List<List<sObject>> searchResults = [FIND :searchString
  *	from the SOSL search above.
  */
 
+List<User> resultUsers = new List<User>();
+resultUsers = searchResults[1];
 
 for(User resultUser : resultUsers){
     System.debug('The User id is: ' + resultUser.id);
@@ -36,7 +45,7 @@ for(User resultUser : resultUsers){
 
 // OPTIONAL TODO #4: Review this alternative solution that processes 
 //  contacts and users using the same loop
-/*
+
 // Alternative solution
 for(List<sObject> resultList :[FIND '{Frank}' 
                                RETURNING Contact(FirstName, LastName), 
@@ -48,5 +57,3 @@ for(List<sObject> resultList :[FIND '{Frank}'
         System.debug('The last name is: ' + record.get('LastName'));
     }
 }
-
-*/
