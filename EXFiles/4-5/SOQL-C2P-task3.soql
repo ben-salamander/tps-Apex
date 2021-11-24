@@ -10,3 +10,5 @@
 //  Execute your SOQL Query via the Command Palette to verify that it's
 //   working as intended.
 //--------------------------------------------------------------------------------------------
+
+SELECT Id, Certification__r.Name, Name FROM Course__c WHERE Certification__c != null
