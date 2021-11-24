@@ -22,6 +22,7 @@ String selectClause = 'SELECT Id, Status, Subject ';
 String fromClause = 'FROM Case ';
 //TODO: fill in the whereClause variable according to the spec
 String whereClause = 'WHERE RecordTypeId = \''+productSupportId+'\'';    
+//String whereClause = 'WHERE RecordTypeId = :productSupportId';    
 
 String fullQuery = selectClause + fromClause + whereClause;
 List<Case> cases = Database.query(fullQuery);
