@@ -1,87 +1,80 @@
 public without sharing class CertificationAttemptTriggerHandler {
 
-public static void createCertificationHeld(List<Certification_Attempt__c> certAttempts,
-                                           Map<Id, Certification_Attempt__c> oldMap) {
+public static void createCertificationHeld(List<Certification_Attempt__c> certAttempts, 
+                                            Map<Id, Certification_Attempt__c> oldMap) {
     /**
-     * If a Contact successfully passes a Certification Attempt, then the
-     * code will gather the data necessary to perform a query for related 
-     * Certification Attempt records.
+     * If a Contact successfully passes a Certification Attempt, then the code
+     * will gather the data necessary to perform a query for related Certification
+     * Attempt records.
      */
 
     System.Debug('Calling the createCertificationHeld method');
 
-    // The set of candidates and certifications will be used to filter  
-    //	the SOQL query when looking at existing cert attempt records:
-    /** TODO #1: Declare and initialize:
-     *   -- A variable of type Set of IDs named candidates initialized to newly constructed set.
-     *   -- A variable of type Set of IDs named certifications initialized to newly constructed set.
-     */
+    // The set of candidates and certifications. Used to filter SOQL query when looking
+    //	at existing cert attempt records
     Set<Id> candidates = new Set<Id>();
     Set<Id> certifications = new Set<Id>();
 
-    // Extract candidates and certifications from incoming records that have the status 'Complete/Pass'
-    /** TODO #2: Create a for loop with an iterator of type Certification_Attempt__c
-     *	named attempt that iterates over the certAttempts variable. Within the for loop,
-     *    -- Create an if statement that checks if a record's status is equal to 'Complete/Pass' 
-     * 		 and if it's insert (use OldMap to determine) OR if its status
-     *	     has changed from the pre-update data. Within the if statement,
-     *       -- Call the add method of the Set class on the variable candidates,
-     *          passing in the Certification_Candidate__c field of the variable named attempt.
-     *       -- Call the add method of the Set class on the variable certifications,
-     *          passing in the Certification_Id__c field of the variable named attempt.
+    /** TODO #1: Declare a variable of type map that uses the type String for the key
+     *           and the type Integer for the value, named passCounts and initialize it to
+     *           a newly constructed map.
      */
-    for (Certification_Attempt__c attempt : certAttempts) {
-        if (attempt.Status__c== 'Complete/Pass' && (oldMap==null || oldMap.get(attempt.Id).Status__c!='Complete/Pass')){
+     Map<String,Integer> passCounts = new Map<String,Integer>();
+
+
+    // Extract candidates and certifications from incoming records that have the status 'Complete/Pass'
+     for(Certification_Attempt__c attempt : certAttempts){
+        if (attempt.Status__c== 'Complete/Pass' && (oldMap==null || oldMap.get(attempt.Id).Status__c!='Complete/Pass')) {
             candidates.add(attempt.Certification_Candidate__c);
             certifications.add(attempt.Certification_Id__c);
         }
     }
 
-    //TODO #3: Using the pattern of nested for loops for SOQL queries
-    /**        -- write an outer loop to query for Certification_Attempt__c sObjects that will have an
-     *            iterator whose type is a list of Certification_Attempt__c sObjects named cAs that
-     *            iterates over the returned value of a SOQL query that:
-     *            -- Selects the Id, certification Id, certification candidate Id, and number of elements
-     *            -- from the Certification Attempt sObject
-     *            -- Filters the query for records:
-     *               -- whose status is 'Complete/Pass'.
-     *               -- and whose certification id is in the certifications collection variable named certifications.
-     *               -- and whose certification candidate id is in the candidates collection variable named candidates.
-     *         -- write an inner loop with an iterator of type Certification_Attempt__c 
-     *			  named cA that iterates over the cAs variable from the outer loop:
-     *            -- Call the debug method of the System class and pass in a concatenated string that contains:
-     *               -- the string literal 'From Inner loop: Retrieved certAttempt id: '
-     *               -- id of the cA variable
-     *               -- the string literal ' candidate id: '
-     *               -- the Certification_Candidate__c field of the cA variable
-     *               -- the string literal ' certification id: '
-     *               -- the Certification_Id__c field of the cA variable
-     *  For example it should look like the following: 
-     *  Retrieved certAttempt id: a0661000000a1g5AAA candidate id: 00361000001qaOKAAY certification id: a0361000000pjOnAAI
-     */
     for (List<Certification_Attempt__c> cAs:[SELECT Id, Certification_Id__c, Certification_Candidate__c, Number_of_Elements_for_Cert__c
-                                                   FROM Certification_Attempt__c
-                                                  WHERE Certification_Candidate__c IN :candidates
-                                                    AND Status__c = 'Complete/Pass' AND Certification_element__r.Certification__c in:certifications]) {
-            for (Certification_Attempt__c cA: cAs) {
-                System.debug('Retrieved certAttempt id: ' + cA.id +
-                             ' candidate id: ' + cA.Certification_Candidate__c +
-                             ' certification id: ' + cA.Certification_Id__c);
+                                               FROM Certification_Attempt__c
+                                              WHERE Certification_Candidate__c IN :candidates
+                                                AND Status__c = 'Complete/Pass' AND Certification_element__r.Certification__c in:certifications]) {
+        for (Certification_Attempt__c cA: cAs) {
+            System.debug('Retrieved certAttempt id: ' + cA.id +
+                         ' candidate id: ' + cA.Certification_Candidate__c +
+                         ' certification id: ' + cA.Certification_Id__c);
+            /** TODO #2: Create an if statement that contains the following logic:
+             *         - If passCounts contains a key that is equal to the candidate id + certification id
+             *            - Retrieve the current value for that key from the map.
+             *            - Add 1 to that value
+             *            - Put the newly calculated value back in the map using the same key
+             *          - Otherwise
+             *            - create a new map entry whose key is equal to the candidate id + certification id
+             *              and whose value is 1.
+             */
+            if (passCounts.containsKey(cA.Certification_Candidate__c + cA.Certification_Id__c)){
+                Integer value = passCounts.get(cA.Certification_Candidate__c + cA.Certification_Id__c);
+                value++;
+                passCounts.put(cA.Certification_Candidate__c + cA.Certification_Id__c, value);
+            } else {
+                passCounts.put(cA.Certification_Candidate__c + cA.Certification_Id__c, 1);
             }
         }
+    }
+    /** TODO #3: Call the debug method of the System class and pass in a parameter that is
+     *           the concatenation of:
+     *           -- The string literal 'Size of passCounts = '
+     *           -- results returned by calling the size method for the passCounts variable
+     */
+     System.debug('Size of passCounts = ' + passCounts.size());
 }
 
 
 public static void grantInstructorSharingAccess(List<Certification_Attempt__c> triggerNew, 
-                    Map<Id, Certification_Attempt__c> oldMap, Boolean isInsert, Boolean isUpdate) {
-
+                                                Map<Id, Certification_Attempt__c> oldMap, 
+                                                Boolean isInsert, Boolean isUpdate) {
     /**
-      *  When a new certification attempt object is assigned an
-      *  instructor, or if an instructor changes on an existing
-      *  object, give the new instructor access to the record by
-      *  creating a share object, and remove access for the
-      *  previous instructor (if it is an update of that field)
-      */
+     *  When a new certification attempt object is assigned an
+     *  instructor, or if an instructor changes on an existing
+     *  object, give the new instructor access to the record by
+     *  creating a share object, and remove access for the
+     *  previous instructor (if it is an update of that field)
+     */
 
     System.debug('Starting the Grant Instructor Sharing Access logic');
 
