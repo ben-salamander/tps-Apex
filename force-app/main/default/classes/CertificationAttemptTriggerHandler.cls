@@ -10,23 +10,35 @@ public static void createCertificationHeld(List<Certification_Attempt__c> certAt
 
     System.Debug('Calling the createCertificationHeld method');
 
-    // The set of candidates and certifications. Used to filter SOQL query when looking
-    //	at existing cert attempt records
+    // The set of candidates and certifications. Used to filter SOQL 
+    //	query when looking at existing cert attempt records
     Set<Id> candidates = new Set<Id>();
     Set<Id> certifications = new Set<Id>();
 
-    /** TODO #1: Declare a variable of type map that uses the type String for the key
-     *           and the type Integer for the value, named passCounts and initialize it to
-     *           a newly constructed map.
+    /** TODO #1: Declare a variable that is a List of Certification_Attempt__c sObjects 
+     *	named certAttemptsPass and initialize it a newly constructed list of 
+     *	Certification_Attempt__c sObjects.
      */
-     Map<String,Integer> passCounts = new Map<String,Integer>();
+     List<Certification_Attempt__c> certAttemptsPass = new List<Certification_Attempt__c>();
 
+    Map<String, Integer> passCounts = new Map<String, Integer>();
+
+    /** TODO #2: Declare a variable of type Map that uses the type String for the key and the
+     *           type Certification_Held__c for the value named certsHeldToAdd and initialize
+     *           it as a newly constructed instance of this map type.
+     */
+    Map<String, Certification_Held__c> certsHeldToAdd = new Map<String, Certification_Held__c>();
 
     // Extract candidates and certifications from incoming records that have the status 'Complete/Pass'
-     for(Certification_Attempt__c attempt : certAttempts){
+    for(Certification_Attempt__c attempt : certAttempts){
         if (attempt.Status__c== 'Complete/Pass' && (oldMap==null || oldMap.get(attempt.Id).Status__c!='Complete/Pass')) {
             candidates.add(attempt.Certification_Candidate__c);
             certifications.add(attempt.Certification_Id__c);
+
+            /** TODO #3: Call the add method for the list class on the certAttemptsPass variable 
+             *  	passing in the variable named attempt as the element to add.
+             */
+            certAttemptsPass.add(attempt);
         }
     }
 
@@ -35,39 +47,74 @@ public static void createCertificationHeld(List<Certification_Attempt__c> certAt
                                               WHERE Certification_Candidate__c IN :candidates
                                                 AND Status__c = 'Complete/Pass' AND Certification_element__r.Certification__c in:certifications]) {
         for (Certification_Attempt__c cA: cAs) {
-            System.debug('Retrieved certAttempt id: ' + cA.id +
-                         ' candidate id: ' + cA.Certification_Candidate__c +
-                         ' certification id: ' + cA.Certification_Id__c);
-            /** TODO #2: Create an if statement that contains the following logic:
-             *         - If passCounts contains a key that is equal to the candidate id + certification id
-             *            - Retrieve the current value for that key from the map.
-             *            - Add 1 to that value
-             *            - Put the newly calculated value back in the map using the same key
-             *          - Otherwise
-             *            - create a new map entry whose key is equal to the candidate id + certification id
-             *              and whose value is 1.
-             */
-            if (passCounts.containsKey(cA.Certification_Candidate__c + cA.Certification_Id__c)){
-                Integer value = passCounts.get(cA.Certification_Candidate__c + cA.Certification_Id__c);
-                value++;
-                passCounts.put(cA.Certification_Candidate__c + cA.Certification_Id__c, value);
-            } else {
-                passCounts.put(cA.Certification_Candidate__c + cA.Certification_Id__c, 1);
+            System.debug('Retrieved certAttempt id' + cA.id + ' candidate id'
+                        + cA.Certification_Id__c + ' certification id' + cA.Certification_Candidate__c
+                        + ' number of elements for cert ' + cA.Number_of_Elements_for_Cert__c);
+            String curKey = cA.Certification_Candidate__c + cA.Certification_Id__c;
+            IF (passCounts.containsKey(curKey)) {
+                passCounts.put(curKey, (passCounts.get(curKey) + 1));
+            } ELSE {
+                passCounts.put(curKey, 1);
             }
         }
     }
-    /** TODO #3: Call the debug method of the System class and pass in a parameter that is
-     *           the concatenation of:
-     *           -- The string literal 'Size of passCounts = '
-     *           -- results returned by calling the size method for the passCounts variable
+
+    System.debug('Size of passCounts = ' + passCounts.size());
+
+    /** TODO #4: Create a for loop with an iterator of type Certification_Attempt__c named certAttempt
+     *           that iterates over the certAttemptsPass variable. Within the for loop:
+     *           -- Declare a variable whose type is String named currentKey and assign it the value that results
+     *              from the concatenation of the candidate id and the certification id for the current record.
+     *           -- an if statement that, if the number of elements for the certification matches the count for the
+     *              corresponding currentKey in passCounts
+     *              -- creates a certification held record
+     *              -- sets the date achieved field of the newly constructed certification held sObject
+     *                 to the Attempt Date of the certification attempt.
+     *              -- sets the certification field of the newly constructed certification held sObject
+     *                 to the id of the certification that will be held.
+     *              -- sets the certificated professional field of the newly constructed certification held
+     *                 sObject to the id of the certification candidate.
+     *              -- add it to the certsHeldToAdd Map, using the currentKey as the key value.
      */
-     System.debug('Size of passCounts = ' + passCounts.size());
+    for (Certification_Attempt__c certAttempt : certAttemptsPass){
+        String currentKey = certAttempt.Certification_Candidate__c + certAttempt.Certification_Id__c;
+        Certification_Held__c certHeld = new Certification_Held__c(
+            Date_Achieved__c = certAttempt.Attempt_Date__c,
+            Certification__c = certAttempt.Certification_Id__c,
+            Certified_Professional__c = certAttempt.Certification_Candidate__c
+        );
+        certsHeldToAdd.put(
+            certAttempt.Certification_Candidate__c + certAttempt.Certification_Id__c,
+            certHeld);
+    }
+
+
+    /** TODO #5: Create a try-catch block that:
+     *           -- In the try section:
+     *              -- an if statement that, if the number of certsHeldToAdd size is greater than zero:
+     *                 -- Use the insert DML statement to insert the values for the certsHeldToAdd variable.
+     *                 -- Call the debug method of the System class, passing in the size of the certsHeldToAdd variable
+     *           -- In the catch section, which should accept as a parameter a variable whose type
+     *              is System.DMLException named ex:
+     *                  Either
+     *                  -- Create an Error_Log__c entry with 'createCertificationHeld' as Source and ex.getMessage() as Message.
+     *                  Or (as an optional extra challenge)
+     *                  -- Immediately Publish a platform event with details of the error
+     */
+    try{
+        if(certsHeldToAdd.size()>0){
+            insert certsHeldToAdd.values();
+            System.debug(certsHeldToAdd.size());
+        }
+    } catch (System.DMLException ex) {
+        Error_Log__c err = new Error_Log__c(Source__c = 'createCertificationHeld', Message__c = ex.getMessage());
+    }
+
 }
 
 
-public static void grantInstructorSharingAccess(List<Certification_Attempt__c> triggerNew, 
-                                                Map<Id, Certification_Attempt__c> oldMap, 
-                                                Boolean isInsert, Boolean isUpdate) {
+public static void grantInstructorSharingAccess(List<Certification_Attempt__c> triggerNew, Map<Id, Certification_Attempt__c> oldMap, Boolean isInsert, Boolean isUpdate) {
+
     /**
      *  When a new certification attempt object is assigned an
      *  instructor, or if an instructor changes on an existing
@@ -148,17 +195,17 @@ public static void grantInstructorSharingAccess(List<Certification_Attempt__c> t
 public static void validateCertificationAttempt(List<Certification_Attempt__c> triggerNew) {
 
     /**
-     *  If a Contact is trying to create a Certification Attempt
-     *  for an element that was already marked as "Complete/Pass"
-     *  or "In Progress", then do not allow the attempt to be
-     *  created and pass back an error
-     */
+    *  If a Contact is trying to create a Certification Attempt
+    *  for an element that was already marked as "Complete/Pass"
+    *  or "In Progress", then do not allow the attempt to be
+    *  created and pass back an error
+    */
 
     System.debug('Starting the Validate Certification Attempt logic');
 
     // All Certification_Attempt__c records which are 'In Progress' OR 'Complete/Pass' will be stored here for comparison purposes
     Set<String> concatStudentElement = new Set<String>();
-            Set<ID> candidateIDs = new Set<ID>();
+    Set<ID> candidateIDs = new Set<ID>();
     for (Certification_Attempt__c dbca : triggerNew) {
         candidateIDs.add(dbca.Certification_Candidate__c);
     }
