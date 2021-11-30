@@ -10,7 +10,7 @@
 
 				  Note, the use of the rerender attribute here is technically just a workaround
 				  for known issue https://success.salesforce.com/issues_view?id=a1p3A0000001BZLQA2 -->
-                <apex:commandButton value="Edit Technician Record" action="{!edit}"/>
+                <apex:commandButton value="Edit Technician Record" action="{!edit}" reRender="theForm"/>
             </apex:pageBlockButtons>
             <apex:pageBlockSection >
                 <!-- TODO #2: Create an apex:outputField component with an attribute named value that is
